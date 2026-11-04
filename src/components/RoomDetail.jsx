@@ -9,6 +9,8 @@ export default function RoomDetail({ room, fav, onFav, onBack, onBook }) {
   const [more, setMore] = useState(false)
   const imgs = room.images?.length ? room.images : []
   const payments = data.payments.filter((p) => p.enabled)
+  const unit = room.priceUnit?.trim() || 'noche'
+  const bookLabel = room.bookLabel?.trim() || 'Reservar ahora'
 
   useEffect(() => { window.scrollTo(0, 0) }, [room.id])
 
@@ -53,11 +55,15 @@ export default function RoomDetail({ room, fav, onFav, onBack, onBook }) {
             {room.rating ? <span><Icon name="star" size={16} fill="currentColor" className="gold" /> {Number(room.rating).toFixed(1)}</span> : null}
           </div>
 
+          {room.tag?.trim() && room.available && <span className="tag-inline">{room.tag}</span>}
           <div className="row-between">
             <h1 className="detail__title">{room.name}</h1>
-            <p className="price lg">{money(room.price)}<small>/noche</small></p>
+            <div className="right">
+              {Number(room.oldPrice) > Number(room.price) && <s className="old-price">{money(room.oldPrice)}</s>}
+              <p className="price lg">{money(room.price)}<small>/{unit}</small></p>
+            </div>
           </div>
-          <p className="muted with-icon"><Icon name="pin" size={16} /> {data.hotel.location}</p>
+          <p className="muted with-icon"><Icon name="pin" size={16} /> {room.location?.trim() || data.hotel.location}</p>
 
           <h3 className="section-label">Descripción</h3>
           <p className={`desc ${more ? 'open' : ''}`}>{room.description}</p>
@@ -86,7 +92,7 @@ export default function RoomDetail({ room, fav, onFav, onBack, onBook }) {
           )}
           <div className="detail__cta-desktop">
             <button className="btn btn--primary btn--lg btn--block" disabled={!room.available} onClick={onBook}>
-              <Icon name="calendar" /> {room.available ? 'Reservar ahora' : 'No disponible'}
+              <Icon name="calendar" /> {room.available ? bookLabel : 'No disponible'}
             </button>
           </div>
         </div>
@@ -95,10 +101,10 @@ export default function RoomDetail({ room, fav, onFav, onBack, onBook }) {
       <div className="bottom-cta">
         <div>
           <small className="muted">Precio</small>
-          <p className="price">{money(room.price)}<small>/noche</small></p>
+          <p className="price">{money(room.price)}<small>/{unit}</small></p>
         </div>
         <button className="btn btn--primary btn--lg" disabled={!room.available} onClick={onBook}>
-          {room.available ? 'Reservar ahora' : 'No disponible'}
+          {room.available ? bookLabel : 'No disponible'}
         </button>
       </div>
     </div>

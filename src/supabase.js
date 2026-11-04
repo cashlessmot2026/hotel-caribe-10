@@ -19,7 +19,7 @@ export async function fetchRemote() {
   if (!s.data) return null
   return {
     hotel: s.data.hotel,
-    rooms: r.data.map(({ position, updated_at, ...room }) => ({ ...room, price: Number(room.price), rating: room.rating == null ? null : Number(room.rating) })),
+    rooms: r.data.map(({ position, updated_at, extra, ...room }) => ({ ...(extra || {}), ...room, price: Number(room.price), rating: room.rating == null ? null : Number(room.rating) })),
     payments: p.data.map(({ position, ...x }) => x),
     restaurant: {
       enabled: s.data.restaurant_enabled,

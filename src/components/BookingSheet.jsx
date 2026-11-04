@@ -64,7 +64,7 @@ export default function BookingSheet({ room, onClose }) {
             <div>
               <p className="muted small">Reservar</p>
               <h3>{room.name}</h3>
-              <p className="price">{money(room.price)}<small>/noche</small></p>
+              <p className="price">{money(room.price)}<small>/{room.priceUnit?.trim() || 'noche'}</small></p>
             </div>
           </div>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Cerrar"><Icon name="close" /></button>

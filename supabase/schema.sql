@@ -31,6 +31,9 @@ create table if not exists public.rooms (
   updated_at  timestamptz not null default now()
 );
 
+-- Campos adicionales de la tarjeta (etiqueta, precio anterior, unidad, ubicación, texto del botón…)
+alter table public.rooms add column if not exists extra jsonb not null default '{}'::jsonb;
+
 create table if not exists public.payments (
   id       text primary key,
   position int not null default 0,
@@ -122,7 +125,7 @@ begin
     updated_at = now();
 
   delete from rooms where true;
-  insert into rooms (id, position, name, price, capacity, beds, size, rating, available, details, description, images)
+  insert into rooms (id, position, name, price, capacity, beds, size, rating, available, details, description, images, extra)
   select
     coalesce(nullif(r->>'id', ''), gen_random_uuid()::text),
     (o - 1)::int,
@@ -135,7 +138,9 @@ begin
     coalesce((r->>'available')::boolean, true),
     coalesce(r->'details', '[]'::jsonb),
     r->>'description',
-    coalesce(r->'images', '[]'::jsonb)
+    coalesce(r->'images', '[]'::jsonb),
+    -- todo lo que no tiene columna propia se guarda aquí
+    r - array['id', 'position', 'name', 'price', 'capacity', 'beds', 'size', 'rating', 'available', 'details', 'description', 'images', 'extra', 'updated_at']
   from jsonb_array_elements(coalesce(p_data->'rooms', '[]'::jsonb)) with ordinality as t(r, o);
 
   delete from payments where true;
