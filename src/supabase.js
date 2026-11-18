@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 // La clave "publishable" está hecha para ir en el navegador; la escritura está protegida por la clave del admin (RPC).
-const URL = import.meta.env.VITE_SUPABASE_URL || 'https://bwossrlpzxuvfhzpgmdm.supabase.co'
-const KEY = import.meta.env.VITE_SUPABASE_KEY || 'sb_publishable_X-EIGY8tCuqG9wBiwSoStw_e2HtuLV_'
+const URL = import.meta.env.VITE_SUPABASE_URL || 'https://gnmkfgiarulrhdegcahg.supabase.co'
+const KEY = import.meta.env.VITE_SUPABASE_KEY || 'sb_publishable_JL8-q199JEHBMonSM0Bf-w_JiECg_N5'
 
 export const supabase = createClient(URL, KEY, { auth: { persistSession: false } })
 
