@@ -1,4 +1,5 @@
 // Datos iniciales. El admin puede modificarlos desde el dashboard oculto (#/admin).
+const B = import.meta.env.BASE_URL
 export const REVIEWS_URL =
   'https://www.google.com/travel/search?q=Apartahotel%20Caribe%20Diez&hl=es-419&gl=co&ssta=1&ts=CAEaRwopEicyJTB4OGYwNWE1NDJmMjI4OGEyNToweDUxMmFjYTJmZTQyMDg2YTUSGhIUCgcI6g8QDBgFEgcI6g8QDBgGGAEyAhAA&qs=CAEyE0Nnb0lwWTJDb2Y3RnNwVlJFQUU4AkIJCaWGIOQvyipRQgkJpYYg5C_KKlE&ap=ugEHcmV2aWV3cw&ictx=111'
 
@@ -15,7 +16,7 @@ export const SEED = {
     placeId: '',
     checkInTime: '3:00 p. m.',
     checkOutTime: '1:00 p. m.',
-    gallery: ['/img/foto-0.jpg', '/img/foto-3.jpg', '/img/foto-2.jpg', '/img/foto-1.jpg', '/img/foto-8.jpg', '/img/foto-5.jpg']
+    gallery: [B + 'img/foto-0.jpg', B + 'img/foto-3.jpg', B + 'img/foto-2.jpg', B + 'img/foto-1.jpg', B + 'img/foto-8.jpg', B + 'img/foto-5.jpg']
   },
   rooms: [
     {
@@ -30,7 +31,7 @@ export const SEED = {
       details: ['Aire acondicionado', 'Wi-Fi gratis', 'Baño privado', 'Agua caliente', 'Toallas y lencería'],
       description:
         'Habitación luminosa con ventana a la calle, pared en verde caribe y camas de madera. Ideal para parejas o familias pequeñas que quieren estar cerca de todo en la isla.',
-      images: ['/img/foto-4.jpg', '/img/foto-7.jpg', '/img/foto-6.jpg']
+      images: [B + 'img/foto-4.jpg', B + 'img/foto-7.jpg', B + 'img/foto-6.jpg']
     },
     {
       id: 'familiar',
@@ -44,7 +45,7 @@ export const SEED = {
       details: ['Aire acondicionado', 'Smart TV', 'Minibar', 'Clóset con espejo', 'Wi-Fi gratis', 'Baño privado'],
       description:
         'Amplia habitación con dos camas dobles, televisor, minibar y clóset con espejo de cuerpo entero. Perfecta para viajar en familia o con amigos.',
-      images: ['/img/foto-9.jpg', '/img/foto-11.jpg', '/img/foto-10.jpg', '/img/foto-6.jpg']
+      images: [B + 'img/foto-9.jpg', B + 'img/foto-11.jpg', B + 'img/foto-10.jpg', B + 'img/foto-6.jpg']
     },
     {
       id: 'estandar',
@@ -58,7 +59,7 @@ export const SEED = {
       details: ['Aire acondicionado', 'Wi-Fi gratis', 'Baño privado', 'Minibar'],
       description:
         'Cómoda y práctica, con todo lo necesario para descansar después de un día de playa. Excelente relación precio–calidad.',
-      images: ['/img/foto-10.jpg', '/img/foto-7.jpg', '/img/foto-6.jpg']
+      images: [B + 'img/foto-10.jpg', B + 'img/foto-7.jpg', B + 'img/foto-6.jpg']
     }
   ],
   payments: [

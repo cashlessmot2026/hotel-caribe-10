@@ -102,7 +102,7 @@ function Home({ rooms, favs, toggleFav, onBook, canInstall, install }) {
     <div className="page home">
       <header className="home-head">
         <button className="avatar" onClick={secretTap} aria-label={data.hotel.name}>
-          <img src="/icon-192.png" alt="" />
+          <img src={import.meta.env.BASE_URL + 'icon-192.png'} alt="" />
         </button>
         <div className="loc">
           <small className="muted">Ubicación</small>

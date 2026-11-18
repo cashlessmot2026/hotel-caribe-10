@@ -25,7 +25,7 @@ export default function Admin() {
     <div className="admin">
       <aside className="admin__side">
         <div className="admin__brand">
-          <img src="/icon-192.png" alt="" />
+          <img src={import.meta.env.BASE_URL + 'icon-192.png'} alt="" />
           <div><strong>Panel admin</strong><small>{data.hotel.name}</small></div>
         </div>
         <nav>
