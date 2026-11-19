@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  base: '/hotel-caribe-10/',
+  base: '/',
   plugins: [
     react(),
     VitePWA({
@@ -18,8 +18,8 @@ export default defineConfig({
         background_color: '#f4f7f6',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/hotel-caribe-10/',
-        scope: '/hotel-caribe-10/',
+        start_url: '/',
+        scope: '/',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -29,7 +29,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,jpg,svg,json}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        navigateFallback: '/hotel-caribe-10/index.html',
+        navigateFallback: '/index.html',
         runtimeCaching: [
           {
             // Fotos subidas por el admin a Supabase Storage
