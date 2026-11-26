@@ -22,6 +22,7 @@ export async function fetchRemote() {
     rooms: r.data.map(({ position, updated_at, extra, ...room }) => ({ ...(extra || {}), ...room, price: Number(room.price), rating: room.rating == null ? null : Number(room.rating) })),
     payments: p.data.map(({ position, ...x }) => x),
     restaurant: {
+      ...(s.data.restaurant || {}),
       enabled: s.data.restaurant_enabled,
       title: s.data.restaurant_title,
       items: m.data.map(({ position, ...x }) => ({ ...x, price: Number(x.price) }))
@@ -43,6 +44,44 @@ export async function adminSave(pin, data) {
 
 export async function adminSetPin(oldPin, newPin) {
   const { error } = await supabase.rpc('admin_set_pin', { p_old: oldPin, p_new: newPin })
+  if (error) throw error
+}
+
+/* ---------- Reservas ---------- */
+
+/** La función no existe todavía: falta ejecutar supabase/schema.sql */
+export const isMissingFn = (e) => e?.code === 'PGRST202' || /could not find the function/i.test(e?.message || '')
+
+const NUMS = ['price_night', 'discount', 'total', 'paid', 'guests']
+const fromRow = (r) => {
+  const b = { ...r }
+  NUMS.forEach((k) => { b[k] = Number(b[k]) || 0 })
+  b.extras = (b.extras || []).map((e) => ({ ...e, price: Number(e.price) || 0, qty: Number(e.qty) || 1 }))
+  b.history = b.history || []
+  return b
+}
+
+/** Registra una solicitud desde la web. Devuelve el código (ej. CD-1001). */
+export async function createBooking(b) {
+  const { data, error } = await supabase.rpc('create_booking', { p: b })
+  if (error) throw error
+  return data
+}
+
+export async function adminBookings(pin) {
+  const { data, error } = await supabase.rpc('admin_bookings', { p_pin: pin })
+  if (error) throw error
+  return (data || []).map(fromRow)
+}
+
+export async function adminBookingSave(pin, b) {
+  const { data, error } = await supabase.rpc('admin_booking_save', { p_pin: pin, p: b })
+  if (error) throw error
+  return fromRow(data)
+}
+
+export async function adminBookingDelete(pin, id) {
+  const { error } = await supabase.rpc('admin_booking_delete', { p_pin: pin, p_id: id })
   if (error) throw error
 }
 

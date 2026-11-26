@@ -159,8 +159,8 @@ function Home({ rooms, favs, toggleFav, onBook, canInstall, install }) {
 
       {data.restaurant.enabled && (
         <a className="promo" href="#/restaurante">
-          <Icon name="food" size={28} />
-          <div><strong>{data.restaurant.title || 'Restaurante'}</strong><small>Mira nuestra carta y pide por WhatsApp</small></div>
+          {data.restaurant.images?.[0] ? <img className="promo__img" src={data.restaurant.images[0]} alt="" /> : <Icon name="food" size={28} />}
+          <div><strong>{data.restaurant.title || 'Restaurante'}</strong><small>{data.restaurant.address || 'Mira nuestra carta y pide por WhatsApp'}</small></div>
           <Icon name="back" className="flip" />
         </a>
       )}

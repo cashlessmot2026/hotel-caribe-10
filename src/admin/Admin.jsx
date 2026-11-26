@@ -5,8 +5,11 @@ import RoomsAdmin from './RoomsAdmin.jsx'
 import PaymentsAdmin from './PaymentsAdmin.jsx'
 import RestaurantAdmin from './RestaurantAdmin.jsx'
 import SettingsAdmin from './SettingsAdmin.jsx'
+import BookingsAdmin from './BookingsAdmin.jsx'
+import { useBookings } from './useBookings.js'
 
 const TABS = [
+  ['bookings', 'calendar', 'Reservas'],
   ['rooms', 'bed', 'Habitaciones'],
   ['payments', 'card', 'Pagos'],
   ['restaurant', 'food', 'Restaurante'],
@@ -15,7 +18,9 @@ const TABS = [
 
 export default function Admin() {
   const { data, pin, logout, saveState, saveError, retrySave, source, update } = useData()
-  const [tab, setTab] = useState('rooms')
+  const [tab, setTab] = useState('bookings')
+  const bk = useBookings(pin)
+  const pending = bk.list.filter((b) => b.status === 'pendiente' && !b.hidden).length
 
   if (!pin) return <Login />
 
@@ -32,6 +37,7 @@ export default function Admin() {
           {TABS.map(([k, icon, label]) => (
             <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
               <Icon name={icon} size={18} /> <span>{label}</span>
+              {k === 'bookings' && pending > 0 && <b className="nav-badge" title="Reservas por confirmar">{pending}</b>}
             </button>
           ))}
         </nav>
@@ -54,6 +60,7 @@ export default function Admin() {
         {source === 'cache' && (
           <div className="notice warn"><div><strong>Sin conexión con Supabase.</strong><small>Mostrando la última copia guardada. Los cambios no se guardarán hasta recuperar la conexión.</small></div></div>
         )}
+        {tab === 'bookings' && <BookingsAdmin bk={bk} />}
         {tab === 'rooms' && <RoomsAdmin />}
         {tab === 'payments' && <PaymentsAdmin />}
         {tab === 'restaurant' && <RestaurantAdmin />}

@@ -16,7 +16,16 @@ export const SEED = {
     placeId: '',
     checkInTime: '3:00 p. m.',
     checkOutTime: '1:00 p. m.',
-    gallery: [B + 'img/foto-0.jpg', B + 'img/foto-3.jpg', B + 'img/foto-2.jpg', B + 'img/foto-1.jpg', B + 'img/foto-8.jpg', B + 'img/foto-5.jpg']
+    gallery: [B + 'img/foto-0.jpg', B + 'img/foto-3.jpg', B + 'img/foto-2.jpg', B + 'img/foto-1.jpg', B + 'img/foto-8.jpg', B + 'img/foto-5.jpg'],
+    // Adicionales que el cliente puede pedir al reservar y el admin puede cambiar en cada reserva.
+    // unit: 'noche' (se cobra por cada noche) | 'estadia' (una vez). price 0 = sin costo.
+    extras: [
+      { id: 'toallas', name: 'Toallas adicionales', price: 0, unit: 'estadia', active: true },
+      { id: 'aire', name: 'Aire acondicionado', price: 0, unit: 'noche', active: true },
+      { id: 'ventana', name: 'Habitación con ventana', price: 0, unit: 'estadia', active: true },
+      { id: 'cama-extra', name: 'Cama adicional', price: 0, unit: 'noche', active: true },
+      { id: 'late-checkout', name: 'Salida tarde (late check-out)', price: 0, unit: 'estadia', active: true }
+    ]
   },
   rooms: [
     {
@@ -71,6 +80,14 @@ export const SEED = {
   restaurant: {
     enabled: false,
     title: 'Restaurante',
+    // El restaurante queda fuera del hotel: datos para que el huésped lo encuentre
+    description: '',
+    address: '',
+    mapsUrl: '',
+    hours: '',
+    whatsapp: '',
+    phones: [],
+    images: [],
     items: [
       { id: 'r1', name: 'Desayuno típico', price: 18000, category: 'Desayunos' },
       { id: 'r2', name: 'Pescado frito con patacón', price: 45000, category: 'Platos fuertes' },

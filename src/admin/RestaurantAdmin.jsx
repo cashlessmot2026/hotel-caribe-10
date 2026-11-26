@@ -2,7 +2,8 @@ import { useState } from 'react'
 import readXlsxFile from 'read-excel-file'
 import Icon from '../components/Icon.jsx'
 import { useData } from '../store.jsx'
-import { downloadFile, money, uid } from '../utils.js'
+import { compressImage, downloadFile, money, uid } from '../utils.js'
+import { uploadImage } from '../supabase.js'
 
 const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
 
@@ -78,17 +79,23 @@ export default function RestaurantAdmin() {
   return (
     <>
       <div className="admin__head">
-        <div><h1>Restaurante</h1><p className="muted small">Sección opcional de la web</p></div>
+        <div>
+          <h1>Restaurante</h1>
+          <p className="muted small">{rest.enabled ? 'Visible en la web para los clientes' : 'Oculto en la web · puedes prepararlo aquí y activarlo cuando quieras'}</p>
+        </div>
         <label className="switch big">
           <input type="checkbox" checked={!!rest.enabled} onChange={() => setRest({ enabled: !rest.enabled })} />
           <span />
-          <b>{rest.enabled ? 'Activado' : 'Desactivado'}</b>
+          <b>{rest.enabled ? 'Visible en la web' : 'Oculto en la web'}</b>
         </label>
       </div>
 
       <div className="card">
-        <label className="field"><span>Título de la sección</span><input value={rest.title || ''} onChange={(e) => setRest({ title: e.target.value })} /></label>
+        <label className="field"><span>Nombre del restaurante</span><input value={rest.title || ''} onChange={(e) => setRest({ title: e.target.value })} /></label>
+        <label className="field"><span>Descripción corta</span><textarea rows={2} value={rest.description || ''} onChange={(e) => setRest({ description: e.target.value })} placeholder="Ej: Comida típica isleña a 2 cuadras del hotel. Descuento para huéspedes." /></label>
       </div>
+
+      <PlaceInfo rest={rest} setRest={setRest} />
 
       <div className="card">
         <div className="row-between">
@@ -138,6 +145,95 @@ export default function RestaurantAdmin() {
         </div>
         {rest.items?.length > 0 && (
           <button className="btn btn--ghost btn--sm" onClick={() => confirm('¿Vaciar toda la carta?') && setRest({ items: [] })}>Vaciar carta</button>
+        )}
+      </div>
+    </>
+  )
+}
+
+/* ---------- Datos del lugar (queda fuera del hotel) ---------- */
+function PlaceInfo({ rest, setRest }) {
+  const { update } = useData()
+  const [phone, setPhone] = useState('')
+  const [busy, setBusy] = useState(false)
+  const phones = rest.phones || []
+  const images = rest.images || []
+
+  const addPhone = (e) => {
+    e.preventDefault()
+    if (!phone.trim()) return
+    setRest({ phones: [...phones, phone.trim()] })
+    setPhone('')
+  }
+  const addImages = async (e) => {
+    const files = [...e.target.files]
+    e.target.value = ''
+    setBusy(true)
+    try {
+      for (const f of files) {
+        const url = await uploadImage(await compressImage(f), 'restaurant')
+        update((d) => ({ ...d, restaurant: { ...d.restaurant, images: [...(d.restaurant.images || []), url] } }))
+      }
+    } catch (err) { alert('No se pudo subir una imagen: ' + err.message) }
+    setBusy(false)
+  }
+  const moveImg = (i, dir) => {
+    const j = i + dir
+    if (j < 0 || j >= images.length) return
+    const next = [...images]
+    ;[next[i], next[j]] = [next[j], next[i]]
+    setRest({ images: next })
+  }
+
+  return (
+    <>
+      <div className="card">
+        <h3 className="section-label">Ubicación y contacto</h3>
+        <p className="muted small">El restaurante queda fuera del hotel: estos datos ayudan al huésped a llegar y a pedir.</p>
+        <label className="field"><span><Icon name="pin" size={16} /> Dirección</span><input value={rest.address || ''} onChange={(e) => setRest({ address: e.target.value })} placeholder="Ej: Av. Colombia #3-45, a 2 cuadras del hotel" /></label>
+        <label className="field"><span>Enlace de Google Maps (opcional)</span><input value={rest.mapsUrl || ''} onChange={(e) => setRest({ mapsUrl: e.target.value })} placeholder="https://maps.app.goo.gl/…" /></label>
+        <div className="grid-2">
+          <label className="field"><span><Icon name="clock" size={16} /> Horario</span><input value={rest.hours || ''} onChange={(e) => setRest({ hours: e.target.value })} placeholder="Lun a Dom · 7 a. m. – 10 p. m." /></label>
+          <label className="field"><span>WhatsApp para pedidos (con indicativo)</span><input value={rest.whatsapp || ''} onChange={(e) => setRest({ whatsapp: e.target.value })} placeholder="Vacío = WhatsApp del hotel" /></label>
+        </div>
+        <div className="field">
+          <span><Icon name="phone" size={16} /> Teléfonos ({phones.length})</span>
+          <form className="row-gap" onSubmit={addPhone}>
+            <input className="grow" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ej: 315 000 0000" />
+            <button className="btn btn--soft"><Icon name="plus" size={18} /> Agregar</button>
+          </form>
+          {phones.length > 0 && (
+            <div className="table">
+              {phones.map((ph, i) => (
+                <div key={i} className="table-row">
+                  <input className="inline-input grow" value={ph} onChange={(e) => setRest({ phones: phones.map((x, j) => (j === i ? e.target.value : x)) })} />
+                  <button className="icon-btn sm danger" onClick={() => setRest({ phones: phones.filter((_, j) => j !== i) })} aria-label="Eliminar"><Icon name="trash" size={16} /></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="card">
+        <h3 className="section-label">Fotos del restaurante ({images.length})</h3>
+        <label className="dropzone">
+          <input type="file" accept="image/*" multiple onChange={addImages} hidden />
+          <Icon name="upload" size={24} /><strong>{busy ? 'Subiendo…' : 'Agregar fotos (fachada, platos, ambiente)'}</strong>
+        </label>
+        {images.length > 0 && (
+          <div className="img-grid">
+            {images.map((src, i) => (
+              <div key={src + i} className="img-tile">
+                <img src={src} alt="" />
+                {i === 0 && <span className="badge badge--cover">Portada</span>}
+                <div className="img-tile__ops">
+                  {i > 0 && <button onClick={() => moveImg(i, -1)} aria-label="Mover antes"><Icon name="back" size={14} /></button>}
+                  <button className="danger" onClick={() => setRest({ images: images.filter((_, j) => j !== i) })} aria-label="Eliminar"><Icon name="trash" size={14} /></button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </>

@@ -27,13 +27,75 @@ export const prettyDate = (iso) =>
 
 export const onlyDigits = (s) => String(s || '').replace(/\D/g, '')
 
+/** Teléfono a formato WhatsApp: solo dígitos y con indicativo de Colombia si es un celular de 10 dígitos. */
+export function normalizePhone(s) {
+  const d = onlyDigits(s)
+  return d.length === 10 && d.startsWith('3') ? '57' + d : d
+}
+
+export const waUrl = (number, text) => `https://wa.me/${normalizePhone(number)}?text=${encodeURIComponent(text)}`
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches
+
 export function openWhatsApp(number, text) {
-  const url = `https://wa.me/${onlyDigits(number)}?text=${encodeURIComponent(text)}`
+  const url = waUrl(number, text)
   // En la PWA instalada / móviles, ir directo abre la app de WhatsApp de forma más fiable
-  const standalone = window.matchMedia('(display-mode: standalone)').matches
-  const w = standalone ? null : window.open(url, '_blank')
+  const w = isStandalone() ? null : window.open(url, '_blank')
   if (w) w.opener = null
   else window.location.href = url
+}
+
+/**
+ * Para abrir WhatsApp DESPUÉS de guardar algo: abre la pestaña en el mismo clic
+ * (así el navegador no la bloquea) y luego la dirige al chat.
+ */
+export function prepareWhatsApp() {
+  const w = isStandalone() ? null : window.open('', '_blank')
+  return {
+    go(number, text) {
+      const url = waUrl(number, text)
+      if (w && !w.closed) { try { w.opener = null } catch { /* */ } w.location.href = url } else window.location.href = url
+    },
+    cancel() { if (w && !w.closed) w.close() }
+  }
+}
+
+/* ---------- Reservas ---------- */
+export const STATUS = {
+  pendiente: { label: 'Pendiente', short: 'Pendiente' },
+  confirmada: { label: 'Confirmada', short: 'Confirmada' },
+  checkin: { label: 'Hospedado (check-in)', short: 'Hospedado' },
+  checkout: { label: 'Finalizada (check-out)', short: 'Finalizada' },
+  cancelada: { label: 'Cancelada', short: 'Cancelada' },
+  no_show: { label: 'No llegó', short: 'No llegó' }
+}
+
+export const extraUnit = (u) => (u === 'noche' ? 'por noche' : 'por estadía')
+
+/** Valor de un adicional dentro de una reserva */
+export const extraTotal = (e, nights) =>
+  (Number(e.price) || 0) * (Number(e.qty) || 1) * (e.unit === 'noche' ? Math.max(nights, 1) : 1)
+
+/** Misma fórmula que booking_total() en la base de datos */
+export function bookingTotals(b) {
+  const nights = nightsBetween(b.check_in, b.check_out)
+  const base = nights * (Number(b.price_night) || 0)
+  const extras = (b.extras || []).reduce((s, e) => s + extraTotal(e, nights), 0)
+  const discount = Number(b.discount) || 0
+  const total = Math.max(0, base + extras - discount)
+  const paid = Number(b.paid) || 0
+  return { nights, base, extras, discount, total, paid, balance: total - paid }
+}
+
+export const shortDate = (iso) =>
+  iso ? new Date(iso + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : '—'
+
+export const dateTime = (iso) =>
+  iso ? new Date(iso).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''
+
+/** Celdas para CSV (Excel en español usa ;) */
+export const csvCell = (v) => {
+  const s = String(v ?? '')
+  return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
 }
 
 /** Reduce imágenes subidas por el admin (máx 1600px, JPEG) para que quepan en el navegador. */

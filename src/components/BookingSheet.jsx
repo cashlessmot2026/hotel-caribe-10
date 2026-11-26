@@ -1,19 +1,27 @@
 import { useEffect, useMemo, useState } from 'react'
 import Icon, { WhatsAppIcon } from './Icon.jsx'
 import { useData } from '../store.jsx'
-import { addDays, money, nightsBetween, openWhatsApp, prettyDate, todayISO } from '../utils.js'
+import { createBooking } from '../supabase.js'
+import { addDays, bookingTotals, extraUnit, money, normalizePhone, prepareWhatsApp, prettyDate, todayISO } from '../utils.js'
+
+/** Espera como máximo `ms`; si la base tarda, la reserva igual sale por WhatsApp. */
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))])
 
 export default function BookingSheet({ room, onClose }) {
   const { data } = useData()
   const payments = data.payments.filter((p) => p.enabled)
+  const catalog = (data.hotel.extras || []).filter((e) => e.active !== false)
   const today = todayISO()
   const [checkIn, setCheckIn] = useState('')
   const [checkOut, setCheckOut] = useState('')
   const [guests, setGuests] = useState(Math.min(2, room.capacity || 2))
   const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [extraIds, setExtraIds] = useState([])
   const [payment, setPayment] = useState(payments[0]?.name || '')
   const [note, setNote] = useState('')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose()
@@ -27,30 +35,55 @@ export default function BookingSheet({ room, onClose }) {
     if (checkIn && (!checkOut || checkOut <= checkIn)) setCheckOut(addDays(checkIn, 1))
   }, [checkIn]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const nights = nightsBetween(checkIn, checkOut)
-  const total = useMemo(() => nights * (Number(room.price) || 0), [nights, room.price])
+  const extras = catalog.filter((e) => extraIds.includes(e.id)).map((e) => ({ ...e, qty: 1 }))
+  const t = useMemo(
+    () => bookingTotals({ check_in: checkIn, check_out: checkOut, price_night: room.price, extras }),
+    [checkIn, checkOut, room.price, extras] // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  const toggleExtra = (id) => setExtraIds((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]))
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
     if (!checkIn) return setError('Elige el día de llegada (check-in).')
     if (checkIn < today) return setError('La fecha de llegada no puede ser en el pasado.')
+    if (name.trim().length < 2) return setError('Escribe tu nombre.')
+    if (normalizePhone(phone).length < 10) return setError('Escribe tu número de WhatsApp para confirmarte la reserva.')
     setError('')
+    setBusy(true)
+    const wa = prepareWhatsApp()
+
+    // 1) Se registra en el panel del admin  2) se envía por WhatsApp (aunque el registro falle)
+    let code = ''
+    try {
+      code = await withTimeout(createBooking({
+        room_id: room.id, check_in: checkIn, check_out: checkOut || null, guests,
+        guest_name: name.trim(), guest_phone: normalizePhone(phone),
+        extra_ids: extraIds, payment_method: payment, note: note.trim()
+      }), 8000)
+    } catch (err) {
+      console.warn('No se pudo registrar la reserva:', err.message)
+    }
+
     const lines = [
       `¡Hola! 👋 Quiero reservar en *${data.hotel.name}* 🌴`,
+      code ? `🔖 *Reserva:* ${code}` : null,
       '',
       `🛏️ *Habitación:* ${room.name}`,
       `📅 *Llegada (check-in):* ${prettyDate(checkIn)}`,
       checkOut ? `📅 *Salida (check-out):* ${prettyDate(checkOut)}` : null,
-      nights ? `🌙 *Noches:* ${nights}` : null,
+      t.nights ? `🌙 *Noches:* ${t.nights}` : null,
       `👥 *Huéspedes:* ${guests}`,
-      nights ? `💰 *Valor estimado:* ${money(total)} (${money(room.price)} x noche)` : null,
+      extras.length ? `➕ *Adicionales:* ${extras.map((x) => x.name).join(', ')}` : null,
+      t.total ? `💰 *Valor estimado:* ${money(t.total)}${t.nights ? ` (${money(room.price)} x noche${t.extras ? ' + adicionales' : ''})` : ''}` : null,
       payment ? `💳 *Medio de pago:* ${payment}` : null,
-      name ? `👤 *Nombre:* ${name}` : null,
+      `👤 *Nombre:* ${name.trim()}`,
+      `📱 *WhatsApp:* +${normalizePhone(phone)}`,
       note.trim() ? `\n📝 *Petición especial:*\n${note.trim()}` : null,
       '',
       '¿Me confirman disponibilidad? ¡Gracias!'
     ].filter((l) => l !== null)
-    openWhatsApp(data.hotel.whatsapp, lines.join('\n'))
+    wa.go(data.hotel.whatsapp, lines.join('\n'))
+    setBusy(false)
     onClose()
   }
 
@@ -82,19 +115,38 @@ export default function BookingSheet({ room, onClose }) {
         </div>
 
         <div className="grid-2">
-          <div className="field">
-            <span><Icon name="users" size={16} /> Huéspedes</span>
-            <div className="stepper">
-              <button type="button" onClick={() => setGuests((g) => Math.max(1, g - 1))} aria-label="Menos"><Icon name="minus" size={16} /></button>
-              <strong>{guests}</strong>
-              <button type="button" onClick={() => setGuests((g) => Math.min(room.capacity || 10, g + 1))} aria-label="Más"><Icon name="plus" size={16} /></button>
-            </div>
-          </div>
           <label className="field">
             <span>Tu nombre</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Opcional" />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre y apellido" autoComplete="name" required />
+          </label>
+          <label className="field">
+            <span><WhatsAppIcon size={15} /> Tu WhatsApp</span>
+            <input type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="315 000 0000" autoComplete="tel" required />
           </label>
         </div>
+
+        <div className="field">
+          <span><Icon name="users" size={16} /> Huéspedes</span>
+          <div className="stepper">
+            <button type="button" onClick={() => setGuests((g) => Math.max(1, g - 1))} aria-label="Menos"><Icon name="minus" size={16} /></button>
+            <strong>{guests}</strong>
+            <button type="button" onClick={() => setGuests((g) => Math.min(room.capacity || 10, g + 1))} aria-label="Más"><Icon name="plus" size={16} /></button>
+          </div>
+        </div>
+
+        {catalog.length > 0 && (
+          <div className="field">
+            <span><Icon name="plus" size={16} /> Adicionales (opcional)</span>
+            <div className="pill-group">
+              {catalog.map((x) => (
+                <button type="button" key={x.id} className={`pill ${extraIds.includes(x.id) ? 'on' : ''}`} onClick={() => toggleExtra(x.id)} aria-pressed={extraIds.includes(x.id)}>
+                  {x.name}
+                  {Number(x.price) > 0 && <small className="pill__sub"> +{money(x.price)} {extraUnit(x.unit)}</small>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {payments.length > 0 && (
           <div className="field">
@@ -115,21 +167,24 @@ export default function BookingSheet({ room, onClose }) {
             rows={3}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Ej: cama extra, llegada tarde, decoración de cumpleaños, cuna para bebé…"
+            placeholder="Ej: llegada tarde, decoración de cumpleaños, cuna para bebé…"
           />
         </label>
 
-        {nights > 0 && (
+        {t.nights > 0 && (
           <div className="summary">
-            <span>{nights} {nights === 1 ? 'noche' : 'noches'} × {money(room.price)}</span>
-            <strong>{money(total)}</strong>
+            <span>
+              {t.nights} {t.nights === 1 ? 'noche' : 'noches'} × {money(room.price)}
+              {t.extras > 0 && <><br /><small>+ adicionales {money(t.extras)}</small></>}
+            </span>
+            <strong>{money(t.total)}</strong>
           </div>
         )}
 
         {error && <p className="error">{error}</p>}
 
-        <button type="submit" className="btn btn--wa btn--block btn--lg">
-          <WhatsAppIcon /> Reservar por WhatsApp
+        <button type="submit" className="btn btn--wa btn--block btn--lg" disabled={busy}>
+          <WhatsAppIcon /> {busy ? 'Enviando…' : 'Reservar por WhatsApp'}
         </button>
         <p className="muted tiny center">Se abrirá WhatsApp con tu solicitud lista para enviar. Check-in {data.hotel.checkInTime} · Check-out {data.hotel.checkOutTime}</p>
       </form>
